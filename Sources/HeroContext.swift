@@ -155,22 +155,25 @@ extension HeroContext {
     let snapshot: UIView
     let snapshotType: HeroSnapshotType = self[view]?.snapshotType ?? .optimized
 
+    let fauxSnapshot = UIView()
+    
     switch snapshotType {
     case .normal:
       snapshot = view.snapshotView() ?? UIView()
     case .layerRender:
       snapshot = view.slowSnapshotView()
     case .noSnapshot:
-      if view.superview != container {
-        if superviewToNoSnapshotSubviewMap[view.superview!] == nil {
-          superviewToNoSnapshotSubviewMap[view.superview!] = []
+      guard let superview = view.superview else { return fauxSnapshot }
+      if superview != container {
+        guard let viewIndex = superview.subviews.index(of: view) else { return fauxSnapshot }
+        if case nil = superviewToNoSnapshotSubviewMap[superview]?.append((viewIndex, view)) {
+          superviewToNoSnapshotSubviewMap[superview] = [(viewIndex, view)]
         }
-        superviewToNoSnapshotSubviewMap[view.superview!]!.append((view.superview!.subviews.index(of: view)!, view))
       }
       snapshot = view
     case .optimized:
       #if os(tvOS)
-        snapshot = view.snapshotView(afterScreenUpdates: true)!
+        snapshot = view.snapshotView(afterScreenUpdates: true) ?? fauxSnapshot
       #else
         if #available(iOS 9.0, *), let stackView = view as? UIStackView {
           snapshot = stackView.slowSnapshotView()
@@ -195,9 +198,9 @@ extension HeroContext {
           newBarView.clipsToBounds = false
 
           // take a snapshot without the background
-          barView.layer.sublayers![0].opacity = 0
-          let realSnapshot = barView.snapshotView(afterScreenUpdates: true)!
-          barView.layer.sublayers![0].opacity = 1
+          barView.layer.sublayers?[0].opacity = 0
+          let realSnapshot = barView.snapshotView(afterScreenUpdates: true) ?? fauxSnapshot
+          barView.layer.sublayers?[0].opacity = 1
 
           newBarView.addSubview(realSnapshot)
           snapshot = newBarView
@@ -223,8 +226,10 @@ extension HeroContext {
 		view.layer.shadowPath = oldShadowPath
 		view.layer.shadowOpacity = oldShadowOpacity
 
+    guard let superview = view.superview else { return fauxSnapshot }
+    
     snapshot.layer.anchorPoint = view.layer.anchorPoint
-    snapshot.layer.position = containerView.convert(view.layer.position, from: view.superview!)
+    snapshot.layer.position = containerView.convert(view.layer.position, from: superview)
     snapshot.layer.transform = containerView.layer.flatTransformTo(layer: view.layer)
     snapshot.layer.bounds = view.layer.bounds
     snapshot.hero.id = view.hero.id
@@ -261,8 +266,10 @@ extension HeroContext {
     }
 
     if let pairedView = pairedView(for: view), let pairedSnapshot = snapshotViews[pairedView] {
-      let siblingViews = pairedView.superview!.subviews
-      let nextSiblings = siblingViews[siblingViews.index(of: pairedView)!+1..<siblingViews.count]
+      guard let pairedViewSuperview = pairedView.superview else { return fauxSnapshot }
+      let siblingViews = pairedViewSuperview.subviews
+      guard let pairedViewIndex = siblingViews.index(of: pairedView) else { return fauxSnapshot }
+      let nextSiblings = siblingViews[pairedViewIndex+1..<siblingViews.count]
       containerView.addSubview(pairedSnapshot)
       containerView.addSubview(snapshot)
       for subview in pairedView.subviews {
