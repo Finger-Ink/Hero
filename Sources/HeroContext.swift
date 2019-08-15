@@ -165,7 +165,7 @@ extension HeroContext {
     case .noSnapshot:
       guard let superview = view.superview else { return fauxSnapshot }
       if superview != container {
-        guard let viewIndex = superview.subviews.index(of: view) else { return fauxSnapshot }
+        guard let viewIndex = superview.subviews.firstIndex(of: view) else { return fauxSnapshot }
         if case nil = superviewToNoSnapshotSubviewMap[superview]?.append((viewIndex, view)) {
           superviewToNoSnapshotSubviewMap[superview] = [(viewIndex, view)]
         }
@@ -175,11 +175,9 @@ extension HeroContext {
       #if os(tvOS)
         snapshot = view.snapshotView(afterScreenUpdates: true) ?? fauxSnapshot
       #else
-        if let customSnapshotView = view as? HeroCustomSnapshotView, let snapshotView = customSnapshotView.heroSnapshot {
-          snapshot = snapshotView
-        } else if #available(iOS 9.0, *), let stackView = view as? UIStackView {
+        if #available(iOS 9.0, *), let stackView = view as? UIStackView {
           snapshot = stackView.slowSnapshotView()
-        } else if let imageView = view as? UIImageView, view.subviews.filter({!$0.isHidden}).isEmpty {
+        } else if let imageView = view as? UIImageView, view.subviews.isEmpty {
           let contentView = UIImageView(image: imageView.image)
           contentView.frame = imageView.bounds
           contentView.contentMode = imageView.contentMode
@@ -270,7 +268,7 @@ extension HeroContext {
     if let pairedView = pairedView(for: view), let pairedSnapshot = snapshotViews[pairedView] {
       guard let pairedViewSuperview = pairedView.superview else { return fauxSnapshot }
       let siblingViews = pairedViewSuperview.subviews
-      guard let pairedViewIndex = siblingViews.index(of: pairedView) else { return fauxSnapshot }
+      guard let pairedViewIndex = siblingViews.firstIndex(of: pairedView) else { return fauxSnapshot }
       let nextSiblings = siblingViews[pairedViewIndex+1..<siblingViews.count]
       containerView.addSubview(pairedSnapshot)
       containerView.addSubview(snapshot)
@@ -396,9 +394,4 @@ extension HeroContext {
       storeViewAlpha(rootView: subview)
     }
   }
-}
-
-/// Allows a view to create their own custom snapshot when using **Optimized** snapshot
-public protocol HeroCustomSnapshotView {
-	var heroSnapshot: UIView? { get }
 }
