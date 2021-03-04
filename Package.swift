@@ -14,8 +14,8 @@ let dependencies = ciDependencies
 let package = Package(
     name: "Hero",
     platforms: [
-        .tvOS(.v10),
-        .iOS(.v10)
+        .tvOS(.v9),
+        .iOS(.v9)
     ],
     products: [
         .library(name: "Hero",

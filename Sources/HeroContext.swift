@@ -187,7 +187,7 @@ extension HeroContext {
       #else
         if #available(iOS 9.0, *), let stackView = view as? UIStackView {
           snapshot = stackView.slowSnapshotView()
-        } else if let imageView = view as? UIImageView, view.subviews.isEmpty {
+				} else if let imageView = view as? UIImageView, view.subviews.filter({!$0.isHidden}).isEmpty {
           let contentView = UIImageView(image: imageView.image)
           contentView.frame = imageView.bounds
           contentView.contentMode = imageView.contentMode
@@ -239,8 +239,6 @@ extension HeroContext {
 		view.layer.shadowPath = oldShadowPath
 		view.layer.shadowOpacity = oldShadowOpacity
 
-    guard let superview = view.superview else { return fauxSnapshot }
-    
     snapshot.layer.anchorPoint = view.layer.anchorPoint
     if let superview = view.superview {
       snapshot.layer.position = containerView.convert(view.layer.position, from: superview)
